@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  REQUESTER
+  DEPT_MANAGER
+  PROCUREMENT_MANAGER
+  PLANT_DIRECTOR
+  COUNTRY_DIRECTOR
+  ADMIN
+}
+
+enum RequestStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW_DEPT
+  IN_REVIEW_PROCUREMENT
+  IN_REVIEW_PLANT
+  IN_REVIEW_COUNTRY
+  CHANGES_REQUESTED
+  REJECTED
+  APPROVED
+}
+
+enum ApprovalDecision {
+  APPROVED
+  REJECTED
+  CHANGES_REQUESTED
+}
+
+enum ApprovalLevel {
+  DEPT_MANAGER
+  PROCUREMENT_MANAGER
+  PLANT_DIRECTOR
+  COUNTRY_DIRECTOR
+}
+
+enum EmailStatus {
+  SENT
+  FAILED
+}
+
+model User {
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  role       Role
+  department String
+  passwordHash String
+  createdAt  DateTime @default(now())
+
+  requests   PurchaseRequest[] @relation("Requester")
+  approvals  ApprovalStep[]
+  attachments Attachment[]
+  auditLogs  AuditLog[]
+}
+
+model PurchaseRequest {
+  id             String        @id @default(cuid())
+  reference      String        @unique
+  department     String
+  title          String
+  description    String?
+  estimatedBudget Float
+  createdById    String
+  status         RequestStatus @default(DRAFT)
+  createdAt      DateTime      @default(now())
+
+  createdBy      User          @relation("Requester", fields: [createdById], references: [id])
+  offers         Offer[]
+  attachments    Attachment[]
+  comparativeTable ComparativeTable?
+  approvals      ApprovalStep[]
+  auditLogs      AuditLog[]
+}
+
+model Supplier {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String
+  offers    Offer[]
+}
+
+model Offer {
+  id            String   @id @default(cuid())
+  requestId     String
+  supplierId    String
+  price         Float
+  currency      String
+  leadTimeDays  Int
+  incoterm      String
+  paymentTerms  String
+  notes         String?
+
+  request       PurchaseRequest @relation(fields: [requestId], references: [id])
+  supplier      Supplier        @relation(fields: [supplierId], references: [id])
+  attachments   Attachment[]
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  requestId    String
+  offerId      String?
+  fileName     String
+  url          String
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  request      PurchaseRequest @relation(fields: [requestId], references: [id])
+  offer        Offer?          @relation(fields: [offerId], references: [id])
+  uploadedBy   User            @relation(fields: [uploadedById], references: [id])
+}
+
+model ComparativeTable {
+  id                     String   @id @default(cuid())
+  requestId              String   @unique
+  criteriaJson           Json
+  scoringJson            Json
+  recommendedSupplierId  String?
+  justification          String
+  totalRecommendedAmount String
+
+  request                PurchaseRequest @relation(fields: [requestId], references: [id])
+}
+
+model ApprovalStep {
+  id             String           @id @default(cuid())
+  requestId      String
+  level          ApprovalLevel
+  approverRole   ApprovalLevel
+  approverUserId String?
+  decision       ApprovalDecision?
+  comment        String?
+  decidedAt      DateTime?
+
+  request        PurchaseRequest @relation(fields: [requestId], references: [id])
+  approver       User?           @relation(fields: [approverUserId], references: [id])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  requestId   String
+  actorUserId String
+  action      String
+  metadataJson String
+  createdAt   DateTime @default(now())
+
+  request     PurchaseRequest @relation(fields: [requestId], references: [id])
+  actor       User            @relation(fields: [actorUserId], references: [id])
+}
+
+model EmailLog {
+  id          String     @id @default(cuid())
+  recipient   String
+  subject     String
+  status      EmailStatus
+  payloadJson String
+  createdAt   DateTime   @default(now())
+}
