@@ -1,4 +1,5 @@
 import { PrismaClient, Role, RequestStatus } from "@prisma/client";
+import { createPasswordHash } from "../lib/auth/password";
 
 const prisma = new PrismaClient();
 
@@ -13,43 +14,50 @@ async function main() {
   await prisma.purchaseRequest.deleteMany();
   await prisma.user.deleteMany();
 
+  const defaultPassword = "Password123!";
   const users = await prisma.user.createMany({
     data: [
       {
         name: "Luc Martin",
         email: "requester@example.com",
         role: Role.REQUESTER,
-        department: "Production"
+        department: "Production",
+        passwordHash: createPasswordHash(defaultPassword)
       },
       {
         name: "Camille Durant",
         email: "dept.manager@example.com",
         role: Role.DEPT_MANAGER,
-        department: "Production"
+        department: "Production",
+        passwordHash: createPasswordHash(defaultPassword)
       },
       {
         name: "Amina Khalil",
         email: "proc.manager@example.com",
         role: Role.PROCUREMENT_MANAGER,
-        department: "Achats"
+        department: "Achats",
+        passwordHash: createPasswordHash(defaultPassword)
       },
       {
         name: "Jonas Weber",
         email: "plant.director@example.com",
         role: Role.PLANT_DIRECTOR,
-        department: "Usine"
+        department: "Usine",
+        passwordHash: createPasswordHash(defaultPassword)
       },
       {
         name: "Rita Gomez",
         email: "country.director@example.com",
         role: Role.COUNTRY_DIRECTOR,
-        department: "Direction"
+        department: "Direction",
+        passwordHash: createPasswordHash(defaultPassword)
       },
       {
         name: "Marie Lopez",
         email: "admin@example.com",
         role: Role.ADMIN,
-        department: "Achats"
+        department: "Achats",
+        passwordHash: createPasswordHash(defaultPassword)
       }
     ]
   });
