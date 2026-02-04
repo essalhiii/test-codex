@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  REQUESTER
+  DEPT_MANAGER
+  PLANT_MANAGER
+  PURCH_MANAGER
+  BUYER
+  ADMIN
+}
+
+enum PurchaseRequestStatus {
+  DRAFT
+  PENDING_DEPT_MANAGER
+  PENDING_PLANT_MANAGER
+  APPROVED_HIERARCHY
+  TO_DISTRIBUTE
+  ASSIGNED_TO_BUYER
+  IN_PROGRESS
+  CLOSED
+  INFO_REQUESTED
+  CHANGE_REQUESTED
+  REJECTED
+}
+
+model Plant {
+  id   String @id @default(cuid())
+  name String @unique
+  users User[]
+  departments Department[]
+  createdAt DateTime @default(now())
+}
+
+model Department {
+  id       String @id @default(cuid())
+  name     String
+  plantId  String
+  plant    Plant   @relation(fields: [plantId], references: [id])
+  users    User[]
+  requests PurchaseRequest[]
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      Role
+  plantId   String?
+  plant     Plant?   @relation(fields: [plantId], references: [id])
+  departmentId String?
+  department  Department? @relation(fields: [departmentId], references: [id])
+  createdRequests PurchaseRequest[] @relation("CreatedBy")
+  assignedRequests PurchaseRequest[] @relation("AssignedBuyer")
+  auditLogs AuditLog[]
+  createdAt DateTime @default(now())
+}
+
+model PurchaseRequest {
+  id            String @id @default(cuid())
+  title         String
+  description   String
+  amount        Float
+  status        PurchaseRequestStatus @default(DRAFT)
+  plantId       String
+  plant         Plant @relation(fields: [plantId], references: [id])
+  departmentId  String
+  department    Department @relation(fields: [departmentId], references: [id])
+  createdById   String
+  createdBy     User @relation("CreatedBy", fields: [createdById], references: [id])
+  assignedBuyerId String?
+  assignedBuyer  User? @relation("AssignedBuyer", fields: [assignedBuyerId], references: [id])
+  history       AuditLog[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model AuditLog {
+  id            String @id @default(cuid())
+  requestId     String
+  request       PurchaseRequest @relation(fields: [requestId], references: [id])
+  action        String
+  fromStatus    PurchaseRequestStatus?
+  toStatus      PurchaseRequestStatus?
+  message       String?
+  performedById String
+  performedBy   User @relation(fields: [performedById], references: [id])
+  createdAt     DateTime @default(now())
+}
